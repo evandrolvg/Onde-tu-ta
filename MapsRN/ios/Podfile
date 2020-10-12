@@ -10,6 +10,8 @@ target 'MapsRN' do
 
   pod 'react-native-maps', :path => '../node_modules/react-native-maps'
 
+  pod 'react-native-geolocation', :path => '../node_modules/@react-native-community/geolocation'
+
   target 'MapsRNTests' do
     inherit! :complete
     # Pods for testing

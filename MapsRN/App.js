@@ -1,11 +1,13 @@
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View, TouchableOpacity, Switch, Image} from 'react-native';
+import {Platform, StyleSheet, Text, View, TouchableOpacity, Switch, Image, PermissionsAndroid} from 'react-native';
 import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
 import MapView, {Marker} from 'react-native-maps';
+import Geolocation from '@react-native-community/geolocation';
 import PubNubReact from 'pubnub-react';
 
 type Props = {};
 export default class App extends Component<Props> {
+
   constructor(props) {
     super(props);
 
@@ -14,20 +16,19 @@ export default class App extends Component<Props> {
       subscribeKey: "sub-c-5095fd92-0c95-11eb-b978-f27038723aa3"
     });
 
-    //Base State
+    //Base state
     this.state = {
-      currentLoc: {
+      currentLoc: { //Rastreia a localização atual do usuário
         latitude: -1,
         longitude: -1
       },
-      numUsers: 0,
+      numUsers: 0, // Número de usuários no aplicativo
       fixedOnUUID: "",
-      focusOnMe: false,
-      users: new Map(),
+      focusOnMe: false, //amplia o mapa para a localização atual do usuário, se verdadeiro
+      users: new Map(), // armazena dados de cada usuário em um mapa
       isFocused: false,
       userCount: 0,
-      allowGPS: true,
-      userCount: 0,
+      allowGPS: true, // alterna a capacidade do aplicativo de coletar dados de GPS do usuário
     };
 
     this.pubnub.init(this);
@@ -44,6 +45,7 @@ export default class App extends Component<Props> {
         fixedOnUUID: ""
       });
     } else {
+      console.log('---------------------'+this.state.currentLoc.latitude);
       region = {
         latitude: this.state.currentLoc.latitude,
         longitude: this.state.currentLoc.longitude,
@@ -64,16 +66,31 @@ export default class App extends Component<Props> {
   };
 
   async setUpApp(){
+    let granted;
 
+if (Platform.OS === "android"){
+  granted = await PermissionsAndroid.request( PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION ,
+    {
+      title: 'Location Permission',
+      message:
+        'PubMoji needs to access your location',
+      buttonNegative: 'No',
+      buttonPositive: 'Yes',
+    });      
+}
+
+    //Pega as atualizações publicadas no canal e atualiza as variáveis ​​de estado
     this.pubnub.getMessage("global", msg => {
       let users = this.state.users;
+
+      //Se solicitação do usuário para ocultar seus dados, remove
       if (msg.message.hideUser) {
         users.delete(msg.publisher);
         this.setState({
           users
         });
       }else{
-        coord = [msg.message.latitude, msg.message.longitude]; //Format GPS Coordinates for Payload
+        coord = [msg.message.latitude, msg.message.longitude]; //Formata
 
         let oldUser = this.state.users.get(msg.publisher);
 
@@ -103,8 +120,9 @@ export default class App extends Component<Props> {
       withPresence: true
     });
 
-    //Get Stationary Coordinate
-    navigator.geolocation.getCurrentPosition(
+    // Geolocation.getCurrentPosition(info => console.log(info));
+    
+    Geolocation.getCurrentPosition(
       position => {
         if (this.state.allowGPS) {
           this.pubnub.publish({
@@ -114,12 +132,17 @@ export default class App extends Component<Props> {
             },
             channel: "global"
           });
+
           let users = this.state.users;
+          
           let tempUser = {
             uuid: this.pubnub.getUUID(),
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           };
+          
+          console.log('MINHA POSIÇÃO: ' + position.coords);
+          
           users.set(tempUser.uuid, tempUser);
           this.setState({
             users,
@@ -131,8 +154,10 @@ export default class App extends Component<Props> {
       { enableHighAccuracy: true,}
     );
 
-    //Track motional Coordinates
-    navigator.geolocation.watchPosition(
+    if (granted === PermissionsAndroid.RESULTS.GRANTED || Platform.OS === "ios") { 
+    
+    // Rastrear Coordenadas de movimento
+    Geolocation.watchPosition(
       position => {
         this.setState({
           currentLoc: position.coords
@@ -146,7 +171,7 @@ export default class App extends Component<Props> {
             channel: "global"
           });
         }
-        //console.log(positon.coords);
+        console.log('USUÁRIO POSIÇÃO: ' + position.coords);
       },
       error => console.log("Maps Error: ", error),
       {
@@ -154,16 +179,21 @@ export default class App extends Component<Props> {
         distanceFilter: 100
       }
     );
+    }else {
+      console.log( "ACCESS_FINE_LOCATION permission denied" )
+    }
   }
 
-
   componentDidUpdate(prevProps, prevState) {
-    if (prevState.allowGPS != this.state.allowGPS) { //check whether the user just toggled their GPS settings
-      if (this.state.allowGPS) { //if user toggled to show their GPS data
-        if (this.state.focusOnMe) { //if user toggled to focus map view on themselves
+    if (prevState.allowGPS != this.state.allowGPS) { // verifica se o usuário alterou suas configurações de GPS
+      if (this.state.allowGPS) { // se alterou para mostrar seus dados, adiciona ao mapa
+        if (this.state.focusOnMe) { // se alterou para focar em si mesmo
           this.animateToCurrent(this.state.currentLoc, 1000);
         }
+        
         let users = this.state.users;
+        
+        // cria um novo objeto de usuário com valores de usuário atualizados para substituir o usuário antigo
         let tempUser = {
           uuid: this.pubnub.getUUID(),
           latitude: this.state.currentLoc.latitude,
@@ -171,26 +201,32 @@ export default class App extends Component<Props> {
           image: this.state.currentPicture,
           username: this.state.username
         };
+
         users.set(tempUser.uuid, tempUser);
+        
+        // atualiza o mapa do usuário localmente
         this.setState(
           {
             users
           },
           () => {
-            this.pubnub.publish({
+            this.pubnub.publish({ // publica dados para atualizar o mapa de todos os usuários
               message: tempUser,
               channel: "global"
             });
           }
         );
-      } else { //if user toggled to hide their GPS data
+      } else { // se o usuário alterou para ocultar seus dados
         let users = this.state.users;
         let uuid = this.pubnub.getUUID();
 
-        users.delete(uuid);
+        users.delete(uuid); // exclui este usuário do mapa
+
         this.setState({
           users,
         });
+
+        // permite que todos os outros usuários saibam que esse usuário deseja ficar oculto
         this.pubnub.publish({
           message: {
             hideUser: true
@@ -231,6 +267,7 @@ export default class App extends Component<Props> {
   render() {
 
     let usersArray = Array.from(this.state.users.values());
+    // console.log(usersArray);
     return (
 
       <View style={styles.container}  >
@@ -246,6 +283,8 @@ export default class App extends Component<Props> {
             }}
           >
             {console.log("users: ", this.state.users.values())}
+            
+            {/* Marcador pra cada usuário */}
             {usersArray.map((item) => (
               <Marker
                 style={styles.marker}
