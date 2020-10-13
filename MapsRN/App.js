@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View, TouchableOpacity, Switch, Image, PermissionsAndroid} from 'react-native';
+import {Platform, StyleSheet, Text, View, TouchableOpacity, Switch, Image, PermissionsAndroid, StatusBar} from 'react-native';
 import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
 import MapView, {Marker} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
@@ -56,7 +56,6 @@ export default class App extends React.Component {
 		//Pega as atualizações publicadas no canal e atualiza as variáveis ​​de estado
 		this.pubnub.getMessage("global", msg => {
 			let usuarios = this.state.usuarios;
-			// console.log('---------------', msg.publisher,'---------------');
 			//Se solicitação do usuário para ocultar seus dados, remove
 			if (msg.message.hideUser) {
 				usuarios.delete(msg.publisher);
@@ -68,14 +67,12 @@ export default class App extends React.Component {
 
 				//Busca usuario para alterar localizacao
 				let oldUser = this.state.usuarios.get(msg.publisher);
-
 				let newUser = {
 					uuid: msg.publisher,
 					latitude: msg.message.latitude,
 					longitude: msg.message.longitude,
 				};
 
-				// console.log('---------------', msg.message.message,'---------------');
 				if(msg.message.message){
 					Timeout.set(msg.publisher, this.clearMessage, 5000, msg.publisher);
 					newUser.message = msg.message.message;
@@ -101,27 +98,28 @@ export default class App extends React.Component {
 			Geolocation.getCurrentPosition(
 				position => {
 					if (this.state.visivel) {
-					this.pubnub.publish({
-						message: {
+						this.pubnub.publish({
+							message: {
+								latitude: position.coords.latitude,
+								longitude: position.coords.longitude,
+							},
+							channel: "global"
+						});
+
+						let usuarios = this.state.usuarios;
+						
+						let tempUser = {
+							uuid: this.pubnub.getUUID(),
 							latitude: position.coords.latitude,
 							longitude: position.coords.longitude,
-						},
-						channel: "global"
-					});
-
-					let usuarios = this.state.usuarios;
-					
-					let tempUser = {
-						uuid: this.pubnub.getUUID(),
-						latitude: position.coords.latitude,
-						longitude: position.coords.longitude,
-					};
-					
-					usuarios.set(tempUser.uuid, tempUser);
-					this.setState({
-						usuarios,
-						localAtual: position.coords
-					});
+						};
+						
+						usuarios.set(tempUser.uuid, tempUser);
+						
+						this.setState({
+							usuarios,
+							localAtual: position.coords
+						});
 					}
 				},
 				error => console.log("Maps Error: ", error),
@@ -158,7 +156,7 @@ export default class App extends React.Component {
 
 	componentDidUpdate(prevProps, prevState) {
 		if (prevState.visivel != this.state.visivel) { // verifica se o usuário alterou suas configurações de GPS
-			if (this.state.visivel) { // se alterou para mostrar seus dados, adiciona ao mapa
+			if (this.state.visivel) { 
 				if (this.state.focoEmMim) { // se alterou para focar em si mesmo
 					this.animaAteDestino(this.state.localAtual, 1000);
 				}
@@ -170,10 +168,9 @@ export default class App extends React.Component {
 					uuid: this.pubnub.getUUID(),
 					latitude: this.state.localAtual.latitude,
 					longitude: this.state.localAtual.longitude,
-					image: this.state.currentPicture,
 					username: this.state.username
 				};
-
+				console.log('UPDATE USER-----------------', tempUser);
 				usuarios.set(tempUser.uuid, tempUser);
 				
 				// atualiza o mapa do usuário localmente
@@ -227,7 +224,7 @@ export default class App extends React.Component {
 				focoEmMim: true
 			});
 
-			// console.log('----------------------------------'+regiao);
+			console.log('REGIAO----------------------------',regiao);
 			this.map.animateToRegion(regiao, 2000);
 		}
 	}
@@ -246,9 +243,9 @@ export default class App extends React.Component {
 		},
 		function (status, response) {
 			// handle status, response
-			// if(response != undefined){
-			// 	usuariosAtivos = response.occupancy;
-			// }
+			if(response != undefined){
+				usuariosAtivos = response.occupancy;
+			}
 		});
 		var totalUsuariosAtivos = Math.max(usuariosAtivos, this.state.usuarios.size)
 		this.setState({totUsuariosAtivos: totalUsuariosAtivos})
@@ -269,9 +266,11 @@ export default class App extends React.Component {
 		let usuariosArray = Array.from(this.state.usuarios.values());
 		//  {"actualChannel": null, "channel": "global", "message": {"latitude": -28.44075171, "longitude": -52.20156785}, "publisher": "pn-6501d516-4ac7-4c95-8c5e-4f597446b381", "subscribedChannel": "global", "subscription": null, "timetoken": "16025452303063757"}
 
-		// console.log('---------------'+usuariosArray+'---------------');
 		return (
+			
 			<View style={styles.container}>
+				<StatusBar hidden={true} />
+				
 				<MapView
 					style={styles.map}
 					ref={ref => (this.map = ref)}
@@ -298,22 +297,52 @@ export default class App extends React.Component {
 							this.marker = marker;
 						}}
 					>
-					<Text>{this.state.totUsuariosAtivos}</Text>
+					{/* <Text>{item.image},{item.latitude}</Text> */}
 					<Image
 						style={styles.profile}
-						source={require('./car.png')}
+						source={
+							(this.state.localAtual.latitude ==  item.latitude) ?
+							require('./assets/marker_eu.png'):
+							require('./assets/marker_outro.png')
+						}
 					/>
 					</Marker>
 				))}
 				</MapView>
+				
+				
+				
+        		<View style={styles.containerTopBar}>
+					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+						<Image style={styles.topBarImgLeft} source={require('./assets/usu_ativos.png')} />
+						<View style={styles.txtCircle}>
+							<Text style={{fontSize: 10,textAlign: 'center', color:'#0084ff'}}>{this.state.totUsuariosAtivos}</Text>
+						</View>
+					</View>		
+					
+					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+						<Image style={styles.topBarLogo} source={require('./assets/logo.png')} />
+					</View>	
 
-				<View style={styles.topBar}>
+					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+						<Image style={styles.topBarImgLeft} source={require('./assets/visivel.png')} />
+						<Switch
+						 	trackColor={{ false: "#767577", true: "#81b0ff" }}
+							thumbColor={this.state.visivel ? "#0084ff" : "#f4f3f4"}
+							ios_backgroundColor="#3e3e3e"
+							value={this.state.visivel}
+							onValueChange={this.visibilidadeGPS}
+						/>
+					</View>	
+				</View>
+
+				{/* <View style={styles.topBar}>
 					<View style={styles.leftBar}>
 						<View style={styles.totUsuariosAtivos}>
 							<Text>{this.state.totUsuariosAtivos}</Text>
 						</View>
 					</View>
-				</View>
+				</View> */}
 
 				<View style={styles.topBar}>
 					<View style={styles.rightBar}>
@@ -328,7 +357,7 @@ export default class App extends React.Component {
 				<View style={styles.bottom}>
 					<View style={styles.bottomRow}>   
 						<TouchableOpacity onPress={this.foco}>
-						<Image style={styles.foco} source={require('./crosshair.png')} />
+							<Image style={styles.foco} source={require('./assets/crosshair.png')} />
 						</TouchableOpacity>
 					</View>
 				</View>
@@ -338,63 +367,99 @@ export default class App extends React.Component {
 }
 
 const styles = StyleSheet.create({
-  bottomRow:{
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  marker: {
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: Platform.OS === "android" ? 100 : 0,
-  },
-  topBar: {
-    top: Platform.OS === "android" ? hp('2%') : hp('5%'),
+	containerTopBar: {
+		alignSelf: 'stretch',
+		height: hp("8%"),
+		flexDirection: 'row', // row
+		backgroundColor: '#292c2e',
+		alignItems: 'center',
+		justifyContent: 'space-between', // center, space-around
+		paddingLeft: wp("2%"),
+		paddingRight: wp("2%")
+	},
+	topBarText:{
+		color:'white',
+		justifyContent: 'center',
+		paddingTop: hp("1%")
+	},
+	topBarImgLeft: {
+		width: hp("4.5%"),
+		height: hp("4.5%"),
+		marginRight: wp("2%"),
+	},
 
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginHorizontal: wp("2%"),
-  },
-  rightBar: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center"
-  },
-  leftBar: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center"
-  },
-  locationSwitch: {
-    left: 300,
-  },
-  container: {
-    flex: 1
-  },
-  bottom: {
-    position: "absolute",
-    flexDirection:'column',
-    bottom: 0,
-    justifyContent: "center",
-    alignSelf: "center",
-    width: "100%",
-    marginBottom: hp("4%"),
-  },
-  foco: {
-    width: hp("4.5%"),
-    height: hp("4.5%"),
-    marginRight: wp("2%"),
-    right: 15
-  },
-  totUsuariosAtivos: {
-    marginHorizontal: 10
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject
-  },
-  profile: {
-    width: hp("4.5%"),
-    height: hp("4.5%")
-  },
+	topBarLogo: {
+		width: hp("21.5%"),
+		height: hp("5.5%"),
+	},
+
+	txtCircle:{
+		width: hp("3.0%"),
+		height: hp("3.0%"),
+		borderRadius: 20,
+		borderWidth: 1,
+		borderColor: '#0084ff',
+		borderStyle: 'solid',
+		justifyContent: 'center',
+		backgroundColor:'white'
+		
+	},
+	bottomRow:{
+		flexDirection: "row-reverse",
+		justifyContent: "space-between",
+		alignItems: "center"
+	},
+	marker: {
+		justifyContent: "center",
+		alignItems: "center",
+		marginTop: Platform.OS === "android" ? 100 : 0,
+	},
+	topBar: {
+		top: Platform.OS === "android" ? hp('2%') : hp('5%'),
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginHorizontal: wp("2%"),
+	},
+	rightBar: {
+		flexDirection: "row",
+		justifyContent: "flex-end",
+		alignItems: "center"
+	},
+	leftBar: {
+		flexDirection: "row",
+		justifyContent: "flex-start",
+		alignItems: "center"
+	},
+	locationSwitch: {
+		left: 300,
+	},
+	container: {
+		flex: 1
+	},
+	bottom: {
+		position: "absolute",
+		flexDirection:'column',
+		bottom: 0,
+		justifyContent: "center",
+		alignSelf: "center",
+		width: "100%",
+		marginBottom: hp("4%"),
+	},
+	foco: {
+		width: hp("4.5%"),
+		height: hp("4.5%"),
+		marginRight: wp("2%"),
+		right: 15
+	},
+	// totUsuariosAtivos: {
+	// 	marginHorizontal: 10
+	// },
+	map: {
+		...StyleSheet.absoluteFillObject
+	},
+	profile: {
+		width: hp("7.5%"),
+		height: hp("7.5%")
+	},
 });
