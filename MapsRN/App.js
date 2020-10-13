@@ -5,341 +5,341 @@ import MapView, {Marker} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
 import PubNubReact from 'pubnub-react';
 
-type Props = {};
-export default class App extends Component<Props> {
+export default class App extends React.Component {
+   
+	constructor(props) {
+		super(props);
 
-  constructor(props) {
-    super(props);
+		//Keys PUBNUB
+		this.pubnub = new PubNubReact({
+			publishKey: "pub-c-57cc915d-31ba-49ab-9c6b-86c041667ebd",
+			subscribeKey: "sub-c-5095fd92-0c95-11eb-b978-f27038723aa3"
+		});
 
-    this.pubnub = new PubNubReact({
-      publishKey: "pub-c-57cc915d-31ba-49ab-9c6b-86c041667ebd",
-      subscribeKey: "sub-c-5095fd92-0c95-11eb-b978-f27038723aa3"
-    });
+		//Base state
+		this.state = {
+			localAtual: { //Rastreia a localização atual do usuário
+				latitude: -1,
+				longitude: -1
+			},
+			// numusuarios: 0, // Número de usuários no aplicativo
+			// UUID: "",
+			focoEmMim: false, //amplia o mapa para a localização atual do usuário, se verdadeiro
+			usuarios: new Map(), // armazena dados de cada usuário em um mapa
+			// focado: false,
+			totUsuariosAtivos: 0,
+			visivel: true, // alterna a capacidade do aplicativo de coletar dados de GPS do usuário
+			regiao: ""
+		};
+		// (((1+Math.random())*0x10000)|0).toString(16).substring(1)
+		this.pubnub.init(this);
+	}
 
-    //Base state
-    this.state = {
-      currentLoc: { //Rastreia a localização atual do usuário
-        latitude: -1,
-        longitude: -1
-      },
-      numUsers: 0, // Número de usuários no aplicativo
-      fixedOnUUID: "",
-      focusOnMe: false, //amplia o mapa para a localização atual do usuário, se verdadeiro
-      users: new Map(), // armazena dados de cada usuário em um mapa
-      isFocused: false,
-      userCount: 0,
-      allowGPS: true, // alterna a capacidade do aplicativo de coletar dados de GPS do usuário
-    };
+	async componentDidMount() {
+    	this.setUpApp()
+  	}
 
-    this.pubnub.init(this);
-  }
+	async setUpApp(){
+		let permConcedida;
 
-  async componentDidMount() {
-    this.setUpApp()
-  }
+		if (Platform.OS === "android"){
+			permConcedida = await PermissionsAndroid.request( PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION ,
+			{
+				title: 'Permissão',
+				message:
+				'Maps precisa do acesso à sua localização',
+				buttonNegative: 'Não',
+				buttonPositive: 'Sim',
+			});      
+		}
 
-  focusLoc = () => {
-    if (this.state.focusOnMe || this.state.fixedOnUUID) {
-      this.setState({
-        focusOnMe: false,
-        fixedOnUUID: ""
-      });
-    } else {
-      console.log('---------------------'+this.state.currentLoc.latitude);
-      region = {
-        latitude: this.state.currentLoc.latitude,
-        longitude: this.state.currentLoc.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01
-      };
-      this.setState({
-        focusOnMe: true
-      });
-      this.map.animateToRegion(region, 2000);
-    }
-  }
+		//Pega as atualizações publicadas no canal e atualiza as variáveis ​​de estado
+		this.pubnub.getMessage("global", msg => {
+			let usuarios = this.state.usuarios;
+			// console.log('---------------', msg.publisher,'---------------');
+			//Se solicitação do usuário para ocultar seus dados, remove
+			if (msg.message.hideUser) {
+				usuarios.delete(msg.publisher);
+				this.setState({
+					usuarios
+				});
+			}else{
+				coord = [msg.message.latitude, msg.message.longitude]; //Formata
 
-  toggleGPS = () => {
-    this.setState({
-      allowGPS: !this.state.allowGPS
-    });
-  };
+				//Busca usuario para alterar localizacao
+				let oldUser = this.state.usuarios.get(msg.publisher);
 
-  async setUpApp(){
-    let granted;
+				let newUser = {
+					uuid: msg.publisher,
+					latitude: msg.message.latitude,
+					longitude: msg.message.longitude,
+				};
 
-if (Platform.OS === "android"){
-  granted = await PermissionsAndroid.request( PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION ,
-    {
-      title: 'Location Permission',
-      message:
-        'PubMoji needs to access your location',
-      buttonNegative: 'No',
-      buttonPositive: 'Yes',
-    });      
-}
+				// console.log('---------------', msg.message.message,'---------------');
+				if(msg.message.message){
+					Timeout.set(msg.publisher, this.clearMessage, 5000, msg.publisher);
+					newUser.message = msg.message.message;
+				}else if(oldUser){
+					newUser.message = oldUser.message
+				}
 
-    //Pega as atualizações publicadas no canal e atualiza as variáveis ​​de estado
-    this.pubnub.getMessage("global", msg => {
-      let users = this.state.users;
+				this.atualizaQtdeUsuariosOn();
 
-      //Se solicitação do usuário para ocultar seus dados, remove
-      if (msg.message.hideUser) {
-        users.delete(msg.publisher);
-        this.setState({
-          users
-        });
-      }else{
-        coord = [msg.message.latitude, msg.message.longitude]; //Formata
+				usuarios.set(newUser.uuid, newUser);
+				this.setState({
+					usuarios
+				});
+			}
+		});
 
-        let oldUser = this.state.users.get(msg.publisher);
+		this.pubnub.subscribe({
+			channels: ["global"],
+			withPresence: true
+		});
 
-        let newUser = {
-          uuid: msg.publisher,
-          latitude: msg.message.latitude,
-          longitude: msg.message.longitude,
-        };
+		if (permConcedida === PermissionsAndroid.RESULTS.GRANTED || Platform.OS === "ios") { 
+			Geolocation.getCurrentPosition(
+				position => {
+					if (this.state.visivel) {
+					this.pubnub.publish({
+						message: {
+							latitude: position.coords.latitude,
+							longitude: position.coords.longitude,
+						},
+						channel: "global"
+					});
 
-        if(msg.message.message){
-          Timeout.set(msg.publisher, this.clearMessage, 5000, msg.publisher);
-          newUser.message = msg.message.message;
-        }else if(oldUser){
-          newUser.message = oldUser.message
-        }
-        this.updateUserCount();
-        users.set(newUser.uuid, newUser);
-        this.setState({
-          users
-        });
+					let usuarios = this.state.usuarios;
+					
+					let tempUser = {
+						uuid: this.pubnub.getUUID(),
+						latitude: position.coords.latitude,
+						longitude: position.coords.longitude,
+					};
+					
+					usuarios.set(tempUser.uuid, tempUser);
+					this.setState({
+						usuarios,
+						localAtual: position.coords
+					});
+					}
+				},
+				error => console.log("Maps Error: ", error),
+				{ enableHighAccuracy: true,}
+			);
 
-      }
-    });
+			// Rastrear movimento
+			Geolocation.watchPosition(
+				position => {
+					this.setState({
+						localAtual: position.coords
+					});
+					if (this.state.visivel) {
+						this.pubnub.publish({
+							message: {
+								latitude: position.coords.latitude,
+								longitude: position.coords.longitude,
+							},
+							channel: "global"
+						});
+					}
+					// console.log('USUÁRIO POSIÇÃO: ' + position.coords);
+				},
+				error => console.log("Maps Error: ", error),
+				{
+					enableHighAccuracy: true,
+					distanceFilter: 10
+				}
+			);
+		}else {
+			console.log( "ACCESS_FINE_LOCATION permission denied" )
+		}
+	}
 
-    this.pubnub.subscribe({
-      channels: ["global"],
-      withPresence: true
-    });
+	componentDidUpdate(prevProps, prevState) {
+		if (prevState.visivel != this.state.visivel) { // verifica se o usuário alterou suas configurações de GPS
+			if (this.state.visivel) { // se alterou para mostrar seus dados, adiciona ao mapa
+				if (this.state.focoEmMim) { // se alterou para focar em si mesmo
+					this.animaAteDestino(this.state.localAtual, 1000);
+				}
+				
+				let usuarios = this.state.usuarios;
+				
+				// cria um novo objeto de usuário com valores de usuário atualizados para substituir o usuário antigo
+				let tempUser = {
+					uuid: this.pubnub.getUUID(),
+					latitude: this.state.localAtual.latitude,
+					longitude: this.state.localAtual.longitude,
+					image: this.state.currentPicture,
+					username: this.state.username
+				};
 
-    // Geolocation.getCurrentPosition(info => console.log(info));
-    
-    Geolocation.getCurrentPosition(
-      position => {
-        if (this.state.allowGPS) {
-          this.pubnub.publish({
-            message: {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            },
-            channel: "global"
-          });
+				usuarios.set(tempUser.uuid, tempUser);
+				
+				// atualiza o mapa do usuário localmente
+				this.setState(
+					{
+						usuarios
+					},
+					() => {
+					this.pubnub.publish({ // publica dados para atualizar o mapa de todos os usuários
+						message: tempUser,
+						channel: "global"
+					});
+					}
+				);
+			} else { // se o usuário alterou para ocultar seus dados
+				let usuarios = this.state.usuarios;
+				let uuid = this.pubnub.getUUID();
 
-          let users = this.state.users;
-          
-          let tempUser = {
-            uuid: this.pubnub.getUUID(),
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-          
-          console.log('MINHA POSIÇÃO: ' + position.coords);
-          
-          users.set(tempUser.uuid, tempUser);
-          this.setState({
-            users,
-            currentLoc: position.coords
-          });
-        }
-      },
-      error => console.log("Maps Error: ", error),
-      { enableHighAccuracy: true,}
-    );
+				usuarios.delete(uuid); // exclui este usuário do mapa
 
-    if (granted === PermissionsAndroid.RESULTS.GRANTED || Platform.OS === "ios") { 
-    
-    // Rastrear Coordenadas de movimento
-    Geolocation.watchPosition(
-      position => {
-        this.setState({
-          currentLoc: position.coords
-        });
-        if (this.state.allowGPS) {
-          this.pubnub.publish({
-            message: {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            },
-            channel: "global"
-          });
-        }
-        console.log('USUÁRIO POSIÇÃO: ' + position.coords);
-      },
-      error => console.log("Maps Error: ", error),
-      {
-        enableHighAccuracy: true,
-        distanceFilter: 100
-      }
-    );
-    }else {
-      console.log( "ACCESS_FINE_LOCATION permission denied" )
-    }
-  }
+				this.setState({
+					usuarios,
+				});
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.allowGPS != this.state.allowGPS) { // verifica se o usuário alterou suas configurações de GPS
-      if (this.state.allowGPS) { // se alterou para mostrar seus dados, adiciona ao mapa
-        if (this.state.focusOnMe) { // se alterou para focar em si mesmo
-          this.animateToCurrent(this.state.currentLoc, 1000);
-        }
-        
-        let users = this.state.users;
-        
-        // cria um novo objeto de usuário com valores de usuário atualizados para substituir o usuário antigo
-        let tempUser = {
-          uuid: this.pubnub.getUUID(),
-          latitude: this.state.currentLoc.latitude,
-          longitude: this.state.currentLoc.longitude,
-          image: this.state.currentPicture,
-          username: this.state.username
-        };
+				// permite que todos os outros usuários saibam que esse usuário deseja ficar oculto
+				this.pubnub.publish({
+					message: {
+						hideUser: true
+					},
+					channel: "global"
+				});
+			}
+		}
+	}
 
-        users.set(tempUser.uuid, tempUser);
-        
-        // atualiza o mapa do usuário localmente
-        this.setState(
-          {
-            users
-          },
-          () => {
-            this.pubnub.publish({ // publica dados para atualizar o mapa de todos os usuários
-              message: tempUser,
-              channel: "global"
-            });
-          }
-        );
-      } else { // se o usuário alterou para ocultar seus dados
-        let users = this.state.users;
-        let uuid = this.pubnub.getUUID();
+	foco = () => {
+		// if (this.state.focoEmMim || this.state.UUID) {
+		if (this.state.focoEmMim) {
+			this.setState({
+				focoEmMim: false,
+				// UUID: ""
+			});
+		} else {
+			regiao = {
+				latitude: this.state.localAtual.latitude,
+				longitude: this.state.localAtual.longitude,
+				latitudeDelta: 0.01,
+				longitudeDelta: 0.01
+			};
+			this.setState({
+				focoEmMim: true
+			});
 
-        users.delete(uuid); // exclui este usuário do mapa
+			// console.log('----------------------------------'+regiao);
+			this.map.animateToRegion(regiao, 2000);
+		}
+	}
 
-        this.setState({
-          users,
-        });
+	visibilidadeGPS = () => {
+		this.setState({
+			visivel: !this.state.visivel
+		});
+	};
 
-        // permite que todos os outros usuários saibam que esse usuário deseja ficar oculto
-        this.pubnub.publish({
-          message: {
-            hideUser: true
-          },
-          channel: "global"
-        });
-      }
-    }
-  }
+	atualizaQtdeUsuariosOn = () => {
+		var usuariosAtivos = 0;
+		this.pubnub.hereNow({
+			includeUUIDs: true,
+			includeState: true
+		},
+		function (status, response) {
+			// handle status, response
+			// if(response != undefined){
+			// 	usuariosAtivos = response.occupancy;
+			// }
+		});
+		var totalUsuariosAtivos = Math.max(usuariosAtivos, this.state.usuarios.size)
+		this.setState({totUsuariosAtivos: totalUsuariosAtivos})
+	};
 
-  updateUserCount = () => {
-    var presenceUsers = 0;
-    this.pubnub.hereNow({
-        includeUUIDs: true,
-        includeState: true
-    },
-    function (status, response) {
-        // handle status, response
-        presenceUsers = response.totalOccupancy;
-    });
-    var totalUsers = Math.max(presenceUsers, this.state.users.size)
-    this.setState({userCount: totalUsers})
+	animaAteDestino = (coords, speed) => {
+		regiao = {
+			latitude: coords.latitude,
+			longitude: coords.longitude,
+			latitudeDelta: 0.01,
+			longitudeDelta: 0.01
+		};
+		this.map.animateToRegion(regiao, speed);
+	};
 
-  };
+	render() {
+		// console.disableYellowBox = true; 
+		let usuariosArray = Array.from(this.state.usuarios.values());
+		//  {"actualChannel": null, "channel": "global", "message": {"latitude": -28.44075171, "longitude": -52.20156785}, "publisher": "pn-6501d516-4ac7-4c95-8c5e-4f597446b381", "subscribedChannel": "global", "subscription": null, "timetoken": "16025452303063757"}
 
+		// console.log('---------------'+usuariosArray+'---------------');
+		return (
+			<View style={styles.container}>
+				<MapView
+					style={styles.map}
+					ref={ref => (this.map = ref)}
+					onMoveShouldSetResponder={this.draggedMap}
+					initialRegion={{
+						latitude: this.state.localAtual.latitude,
+						longitude: this.state.localAtual.longitude,
+						latitudeDelta: 0.01,
+						longitudeDelta: 0.01
+					}}
+				>
+				{/* {console.log("usuarios: "+ this.state.usuarios.values())} */}
+				
+				{/* Marcador pra cada usuário */}
+				{usuariosArray.map((item) => (
+					<Marker
+						style={styles.marker}
+						key={item.uuid}
+						coordinate={{
+							latitude: item.latitude,
+							longitude: item.longitude
+						}}
+						ref={marker => {
+							this.marker = marker;
+						}}
+					>
+					<Text>{this.state.totUsuariosAtivos}</Text>
+					<Image
+						style={styles.profile}
+						source={require('./car.png')}
+					/>
+					</Marker>
+				))}
+				</MapView>
 
-  animateToCurrent = (coords, speed) => {
-    region = {
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01
-    };
-    this.map.animateToRegion(region, speed);
-  };
+				<View style={styles.topBar}>
+					<View style={styles.leftBar}>
+						<View style={styles.totUsuariosAtivos}>
+							<Text>{this.state.totUsuariosAtivos}</Text>
+						</View>
+					</View>
+				</View>
 
+				<View style={styles.topBar}>
+					<View style={styles.rightBar}>
+						<Switch
+							value={this.state.visivel}
+							style={styles.locationSwitch}
+							onValueChange={this.visibilidadeGPS}
+						/>
+					</View>
+				</View>
 
-  render() {
-
-    let usersArray = Array.from(this.state.users.values());
-    // console.log(usersArray);
-    return (
-
-      <View style={styles.container}  >
-          <MapView
-            style={styles.map}
-            ref={ref => (this.map = ref)}
-            onMoveShouldSetResponder={this.draggedMap}
-            initialRegion={{
-              latitude: 36.81808,
-              longitude: -98.640297,
-              latitudeDelta: 60.0001,
-              longitudeDelta: 60.0001
-            }}
-          >
-            {console.log("users: ", this.state.users.values())}
-            
-            {/* Marcador pra cada usuário */}
-            {usersArray.map((item) => (
-              <Marker
-                style={styles.marker}
-                key={item.uuid}
-                coordinate={{
-                  latitude: item.latitude,
-                  longitude: item.longitude
-                }}
-                ref={marker => {
-                  this.marker = marker;
-                }}
-              >
-                <Image
-                    style={styles.profile}
-                    source={require('./car.png')}
-                />
-              </Marker>
-            ))}
-          </MapView>
-
-          <View style={styles.topBar}>
-            <View style={styles.leftBar}>
-              <View style={styles.userCount}>
-                  <Text>{this.state.userCount}</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.topBar}>
-            <View style={styles.rightBar}>
-                <Switch
-                value={this.state.allowGPS}
-                style={styles.locationSwitch}
-                onValueChange={this.toggleGPS}
-                />
-            </View>
-          </View>
-
-          <View style={styles.bottom}>
-          <View style={styles.bottomRow}>   
-            <TouchableOpacity onPress={this.focusLoc}>
-              <Image style={styles.focusLoc} source={require('./crosshair.png')} />
-            </TouchableOpacity>
-          </View>
-          </View>
-      </View>
-      
-
-    );
-  }
+				<View style={styles.bottom}>
+					<View style={styles.bottomRow}>   
+						<TouchableOpacity onPress={this.foco}>
+						<Image style={styles.foco} source={require('./crosshair.png')} />
+						</TouchableOpacity>
+					</View>
+				</View>
+			</View>
+		);
+	}
 }
 
 const styles = StyleSheet.create({
   bottomRow:{
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center"
   },
@@ -381,13 +381,13 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: hp("4%"),
   },
-  focusLoc: {
+  foco: {
     width: hp("4.5%"),
     height: hp("4.5%"),
     marginRight: wp("2%"),
-    left: 15
+    right: 15
   },
-  userCount: {
+  totUsuariosAtivos: {
     marginHorizontal: 10
   },
   map: {
