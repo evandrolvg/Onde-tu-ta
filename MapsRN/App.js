@@ -433,8 +433,8 @@ const styles = StyleSheet.create({
 		paddingRight: wp("2%")
 	},
 	foco: {
-		width: hp("4.5%"),
-		height: hp("4.5%"),
+		width: hp("7.5%"),
+		height: hp("7.5%"),
 		marginRight: wp("3%"),
 	},
 	map: {
