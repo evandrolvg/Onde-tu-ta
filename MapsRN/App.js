@@ -269,8 +269,10 @@ export default class App extends React.Component {
 		return (
 			
 			<View style={styles.container}>
+				{/* Esconde status bar */}
 				<StatusBar hidden={true} />
 				
+				{/* Mapa */}
 				<MapView
 					style={styles.map}
 					ref={ref => (this.map = ref)}
@@ -297,7 +299,7 @@ export default class App extends React.Component {
 							this.marker = marker;
 						}}
 					>
-					{/* <Text>{item.image},{item.latitude}</Text> */}
+					
 					<Image
 						style={styles.profile}
 						source={
@@ -310,20 +312,22 @@ export default class App extends React.Component {
 				))}
 				</MapView>
 				
-				
-				
+				{/* Top Bar */}
         		<View style={styles.containerTopBar}>
+					<View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+						<Image style={styles.topBarLogo} source={require('./assets/logo.png')} />
+					</View>	
+				</View>
+
+			
+				{/* Bottom Bar */}
+				<View style={styles.containerBottomBar}>
 					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
 						<Image style={styles.topBarImgLeft} source={require('./assets/usu_ativos.png')} />
 						<View style={styles.txtCircle}>
 							<Text style={{fontSize: 10,textAlign: 'center', color:'#0084ff'}}>{this.state.totUsuariosAtivos}</Text>
 						</View>
-					</View>		
-					
-					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-						<Image style={styles.topBarLogo} source={require('./assets/logo.png')} />
 					</View>	
-
 					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
 						<Image style={styles.topBarImgLeft} source={require('./assets/visivel.png')} />
 						<Switch
@@ -336,26 +340,8 @@ export default class App extends React.Component {
 					</View>	
 				</View>
 
-				{/* <View style={styles.topBar}>
-					<View style={styles.leftBar}>
-						<View style={styles.totUsuariosAtivos}>
-							<Text>{this.state.totUsuariosAtivos}</Text>
-						</View>
-					</View>
-				</View> */}
-
-				<View style={styles.topBar}>
+				<View style={styles.top}>
 					<View style={styles.rightBar}>
-						<Switch
-							value={this.state.visivel}
-							style={styles.locationSwitch}
-							onValueChange={this.visibilidadeGPS}
-						/>
-					</View>
-				</View>
-
-				<View style={styles.bottom}>
-					<View style={styles.bottomRow}>   
 						<TouchableOpacity onPress={this.foco}>
 							<Image style={styles.foco} source={require('./assets/crosshair.png')} />
 						</TouchableOpacity>
@@ -368,12 +354,13 @@ export default class App extends React.Component {
 
 const styles = StyleSheet.create({
 	containerTopBar: {
-		alignSelf: 'stretch',
+		alignSelf: 'center',
+		width: wp("100%"),
 		height: hp("8%"),
 		flexDirection: 'row', // row
 		backgroundColor: '#292c2e',
 		alignItems: 'center',
-		justifyContent: 'space-between', // center, space-around
+		justifyContent: 'center', // center, space-around
 		paddingLeft: wp("2%"),
 		paddingRight: wp("2%")
 	},
@@ -414,47 +401,42 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		marginTop: Platform.OS === "android" ? 100 : 0,
 	},
-	topBar: {
+	top: {
 		top: Platform.OS === "android" ? hp('2%') : hp('5%'),
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		marginHorizontal: wp("2%"),
+		// marginHorizontal: wp("2%"),
 	},
 	rightBar: {
+		width: wp("100%"),
 		flexDirection: "row",
 		justifyContent: "flex-end",
 		alignItems: "center"
 	},
-	leftBar: {
-		flexDirection: "row",
-		justifyContent: "flex-start",
-		alignItems: "center"
-	},
-	locationSwitch: {
-		left: 300,
-	},
 	container: {
 		flex: 1
 	},
-	bottom: {
+	containerBottomBar: {
 		position: "absolute",
-		flexDirection:'column',
 		bottom: 0,
-		justifyContent: "center",
-		alignSelf: "center",
 		width: "100%",
-		marginBottom: hp("4%"),
+		padding: wp("2%"),
+		// marginBottom: hp("4%"),
+		alignSelf: 'stretch',
+		height: hp("8%"),
+		flexDirection: 'row', // row
+		backgroundColor: '#292c2e',
+		alignItems: 'center',
+		justifyContent: 'space-between', // center, space-around
+		paddingLeft: wp("2%"),
+		paddingRight: wp("2%")
 	},
 	foco: {
 		width: hp("4.5%"),
 		height: hp("4.5%"),
-		marginRight: wp("2%"),
-		right: 15
+		marginRight: wp("3%"),
 	},
-	// totUsuariosAtivos: {
-	// 	marginHorizontal: 10
-	// },
 	map: {
 		...StyleSheet.absoluteFillObject
 	},
