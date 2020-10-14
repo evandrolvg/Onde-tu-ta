@@ -2,8 +2,12 @@ import React, {Component} from 'react';
 import {Platform, StyleSheet, Text, View, TouchableOpacity, Switch, Image, PermissionsAndroid, StatusBar} from 'react-native';
 import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
 import MapView, {Marker} from 'react-native-maps';
+import MapViewDirections from 'react-native-maps-directions';
+import getDirections from 'react-native-google-maps-directions'
 import Geolocation from '@react-native-community/geolocation';
 import PubNubReact from 'pubnub-react';
+
+const GOOGLE_MAPS_APIKEY = 'AIzaSyAs_3ZowQo12YCw2yWl9hDad8LNDGhUnD8';
 
 export default class App extends React.Component {
    
@@ -29,7 +33,7 @@ export default class App extends React.Component {
 			// focado: false,
 			totUsuariosAtivos: 0,
 			visivel: true, // alterna a capacidade do aplicativo de coletar dados de GPS do usuário
-			regiao: ""
+			regiao: "",
 		};
 		// (((1+Math.random())*0x10000)|0).toString(16).substring(1)
 		this.pubnub.init(this);
@@ -172,6 +176,8 @@ export default class App extends React.Component {
 				};
 				console.log('UPDATE USER-----------------', tempUser);
 				usuarios.set(tempUser.uuid, tempUser);
+
+				// this.setState({destino: this.state.localAtual});
 				
 				// atualiza o mapa do usuário localmente
 				this.setState(
@@ -224,7 +230,7 @@ export default class App extends React.Component {
 				focoEmMim: true
 			});
 
-			console.log('REGIAO----------------------------',regiao);
+			// console.log('REGIAO----------------------------',regiao);
 			this.map.animateToRegion(regiao, 2000);
 		}
 	}
@@ -288,6 +294,7 @@ export default class App extends React.Component {
 				
 				{/* Marcador pra cada usuário */}
 				{usuariosArray.map((item) => (
+					
 					<Marker
 						style={styles.marker}
 						key={item.uuid}
@@ -310,6 +317,20 @@ export default class App extends React.Component {
 					/>
 					</Marker>
 				))}
+
+				{/* {console.log("ALOHA: "+ this.state.localAtual.latitude)} */}
+				{/* {console.log("ROTA: "+ this.state.rota.destination.latitude)} */}
+				{/* <MapViewDirections
+				 origin ='-28.439842, -52.201298'
+				destination='-28.442483, -52.198401'
+				 strokeWidth={3}
+                    strokeColor="rgb(0,139,241)"
+					// origin={ latitude= 42.3616132, longitude= -71.0672576 }
+        			// destination={ latitude= 42.3730591, longitude= -71.033754 }
+					// origin={this.state.localAtual}
+					// destination={this.state.rota.destination}
+					apikey={GOOGLE_MAPS_APIKEY}
+				/> */}
 				</MapView>
 				
 				{/* Top Bar */}
@@ -325,7 +346,7 @@ export default class App extends React.Component {
 					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
 						<Image style={styles.topBarImgLeft} source={require('./assets/usu_ativos.png')} />
 						<View style={styles.txtCircle}>
-							<Text style={{fontSize: 10,textAlign: 'center', color:'#0084ff'}}>{this.state.totUsuariosAtivos}</Text>
+							<Text style={{fontSize: 10,textAlign: 'center', color:'#0084ff'}}>{this.state.destino}</Text>
 						</View>
 					</View>	
 					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
