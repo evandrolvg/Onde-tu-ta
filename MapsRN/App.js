@@ -6,6 +6,9 @@ import MapViewDirections from 'react-native-maps-directions';
 import getDirections from 'react-native-google-maps-directions'
 import Geolocation from '@react-native-community/geolocation';
 import PubNubReact from 'pubnub-react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// import asyncstorageDown from 'asyncstorage-down'
+// import levelup from 'levelup'
 import styles from "./styles/MapsStyle";
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs_3ZowQo12YCw2yWl9hDad8LNDGhUnD8';
 import { YellowBox } from "react-native";
@@ -43,11 +46,23 @@ export default class App extends React.Component {
 		this.pubnub.init(this);
 	}
 
+	getDados = async () => {
+		try {
+			const value = await AsyncStorage.getItem('@username')
+			if(value !== null) {
+				this.setState({username: value});
+			}
+		} catch(e) {
+			console.log('Erro getDados');
+		}
+	}
+
 	modalVisivel = (bool) => {
 		this.setState({ modalVisivel: bool })
 	}
 
 	async componentDidMount() {
+		this.getDados();
 		this.setUpApp()
   	}
 
@@ -84,11 +99,11 @@ export default class App extends React.Component {
 				let oldUser = this.state.usuarios.get(msg.publisher);
 				
 				var usernameTemp = "";
-				// if (this.state.uuid ==  msg.message.uuid) {
-					// usernameTemp = this.state.username;
-				// }else{
-				 	usernameTemp = msg.username;
-				// }
+				if (this.state.uuid ==  msg.message.uuid) {
+					usernameTemp = this.state.username;
+				}else{
+				 	usernameTemp = msg.message.username;
+				}
 
 				let newUser = {
 					uuid: msg.message.uuid,
@@ -300,7 +315,12 @@ export default class App extends React.Component {
 		this.map.animateToRegion(this.regiao, speed);
 	};
 
-	setInputTexto = (nome) => {
+	async setInputTexto (nome) {
+		try {
+			await AsyncStorage.setItem('@username', nome);
+		} catch (e) {
+		  	console.log('Erro gravaDados');
+		}
 		this.setState({ 
 			inputTextNome: nome,
 		})
@@ -428,9 +448,9 @@ export default class App extends React.Component {
 				{/* Top Bar */}
         		<View style={styles.containerTopBar}>
 					
-					{/* <TouchableOpacity onPress={() => {this.modalVisivel(true);}}>
+					<TouchableOpacity onPress={() => {this.modalVisivel(true);}}>
 						<Image style={styles.topBarLogo} source={require('./assets/logo.png')} />
-					</TouchableOpacity> */}
+					</TouchableOpacity>
 					<View style={{ flexDirection: 'row', justifyContent: 'center' }}>
 						<Image style={styles.topBarLogo} source={require('./assets/logo.png')} />
 					</View>	

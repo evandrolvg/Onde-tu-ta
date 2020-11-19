@@ -10,8 +10,9 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@react-native-community/async-storage": "^1.12.1",
+    "@react-native-async-storage/async-storage": "^1.13.2",
     "@react-native-community/geolocation": "^2.0.2",
+    "asyncstorage-down": "^4.2.0",
     "pubnub": "^4.29.9",
     "pubnub-react": "^1.3.2",
     "react": "16.13.1",
