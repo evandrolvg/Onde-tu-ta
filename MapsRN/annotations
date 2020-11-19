@@ -14,3 +14,5 @@ npx react-native run-android
               timestamp={this.state.myPosition.timestamp}
               description={myMetadata}
             /> */
+
+  
