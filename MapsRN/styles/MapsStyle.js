@@ -24,6 +24,12 @@ export default StyleSheet.create({
 		marginRight: wp("2%"),
 	},
 
+	topBarImgCenter: {
+		width: hp("4.5%"),
+		height: hp("4.5%"),
+		marginLeft: wp("6%"),
+	},
+
 	topBarLogo: {
 		width: hp("21.5%"),
 		height: hp("5.5%"),
@@ -101,56 +107,63 @@ export default StyleSheet.create({
 		width: hp("7.5%"),
 		height: hp("7.5%")
   },
-  
   // MODAL
-  modalView: {
-    flex: 1,
-    backgroundColor: "#88cbf0",
-    margin: 10,
-    borderRadius: 5,
-    paddingBottom: 30,
-  },
-  modalContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  input: {
-    height: 48,
-    borderRadius: 5,
-    overflow: "hidden",
-    backgroundColor: "white",
-    marginTop: 20,
-    marginBottom: 10,
-    marginLeft: 30,
-    marginRight: 30,
-    paddingLeft: 16,
-  },
-  button: {
-    backgroundColor: "#005cc5",
-    marginLeft: 30,
-    marginRight: 30,
-    marginTop: 20,
-    height: 48,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonCancel: {
-    backgroundColor: "red",
-    marginLeft: 30,
-    marginRight: 30,
-    marginTop: 20,
-    height: 48,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonTitle: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  imgEdit: {
-    height:100,
-  },
+	modalView: {
+		backgroundColor: "#292c2e",
+		margin: 10,
+		marginTop:hp("25%"),
+		borderRadius: 5,
+		paddingBottom: 30,
+	},
+	modalContainer: {
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	input: {
+		height: 48,
+		borderRadius: 5,
+		overflow: "hidden",
+		backgroundColor: "white",
+		marginTop: 20,
+		marginBottom: 10,
+		marginLeft: 30,
+		marginRight: 30,
+		paddingLeft: 16,
+	},
+	button: {
+		backgroundColor: "#005cc5",
+		marginLeft: 30,
+		marginRight: 30,
+		marginTop: 20,
+		height: 48,
+		borderRadius: 5,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	buttonCancel: {
+		backgroundColor: "red",
+		marginLeft: 30,
+		marginRight: 30,
+		marginTop: 20,
+		height: 48,
+		borderRadius: 5,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	buttonTitle: {
+		color: "white",
+		fontSize: 16,
+		fontWeight: "bold",
+	},
+	imgEdit: {
+		height:100,
+	},
+	name: {
+		// height: 48,
+		borderRadius: 5,
+		overflow: "hidden",
+		backgroundColor: "#dcdcdc",
+		alignContent: "center",
+		padding: 7,
+	},
 });

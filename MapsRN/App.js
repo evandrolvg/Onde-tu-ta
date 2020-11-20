@@ -7,8 +7,6 @@ import getDirections from 'react-native-google-maps-directions'
 import Geolocation from '@react-native-community/geolocation';
 import PubNubReact from 'pubnub-react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import asyncstorageDown from 'asyncstorage-down'
-// import levelup from 'levelup'
 import styles from "./styles/MapsStyle";
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs_3ZowQo12YCw2yWl9hDad8LNDGhUnD8';
 import { YellowBox } from "react-native";
@@ -42,7 +40,7 @@ export default class App extends React.Component {
 			modalVisivel: false,
 			inputTextNome: ""
 		};
-		// (((1+Math.random())*0x10000)|0).toString(16).substring(1)
+
 		this.pubnub.init(this);
 	}
 
@@ -67,8 +65,6 @@ export default class App extends React.Component {
   	}
 
 	async setUpApp(){
-		
-		
 		let permConcedida;
 
 		if (Platform.OS === "android"){
@@ -123,11 +119,7 @@ export default class App extends React.Component {
 				if(typeof newUser.uuid !== "undefined"){
 					usuarios.set(newUser.uuid, newUser);
 				}
-				// console.log('*******************************************************************');
-				// console.log(usuarios);
-				// Map {"pn-8b1ca91a-334a-4170-8447-e207ffff89d9" => 
-				// 	{"latitude": -28.440497306514757, "longitude": -52.21574427619677, "uuid": "pn-8b1ca91a-334a-4170-8447-e207ffff89d9"}, 
-				// 	undefined => {"latitude": -28.440497306514757, "longitude": -52.21574427619677, "message": undefined, "uuid": undefined}}
+				
 				this.setState({
 					usuarios
 				});
@@ -160,7 +152,6 @@ export default class App extends React.Component {
 							username: this.state.username
 						};
 						usuarios.set(tempUser.uuid, tempUser);
-
 
 						// console.log('-----------------------------');
 						// console.log(usuarios);
@@ -225,8 +216,6 @@ export default class App extends React.Component {
 				// console.log('UPDATE USER-----------------', tempUser);
 				usuarios.set(tempUser.uuid, tempUser);
 
-				// this.setState({destino: this.state.localAtual});
-				
 				// atualiza o mapa do usuário localmente
 				this.setState(
 					{
@@ -318,12 +307,12 @@ export default class App extends React.Component {
 	async setInputTexto (nome) {
 		try {
 			await AsyncStorage.setItem('@username', nome);
+			this.setState({ 
+				inputTextNome: nome,
+			})
 		} catch (e) {
 		  	console.log('Erro gravaDados');
 		}
-		this.setState({ 
-			inputTextNome: nome,
-		})
 	}
 
 	tracaRota = (uuid, latitude, longitude) => {
@@ -343,12 +332,9 @@ export default class App extends React.Component {
 	}
 
 	render() {
-			// console.disableYellowBox = true; 
 		let usuariosArray = Array.from(this.state.usuarios.values());
-		//  {"actualChannel": null, "channel": "global", "message": {"latitude": -28.44075171, "longitude": -52.20156785}, "publisher": "pn-6501d516-4ac7-4c95-8c5e-4f597446b381", "subscribedChannel": "global", "subscription": null, "timetoken": "16025452303063757"}
 
 		return (
-			
 			<View style={styles.container}>
 				{/* Esconde status bar */}
 				<StatusBar hidden={true} />
@@ -369,7 +355,7 @@ export default class App extends React.Component {
                         placeholderTextColor="#aaaaaa"
                         onChangeText={(username) => {
                                                         this.setState({inputTextNome: username, username: username}); 
-                                                        // console.log('state ', this.state.inputTextNome)
+                                                        console.log('state ', this.state.inputTextNome)
                                                       }}
                         defaultValue={this.state.inputTextNome}
                         underlineColorAndroid="transparent"
@@ -400,7 +386,6 @@ export default class App extends React.Component {
 						longitudeDelta: 0.01
 					}}
 				>
-				{/* {console.log("usuarios: "+ usuariosArray.values().uuid)} */}
 				
 				{/* Marcador pra cada usuário */}
 				{usuariosArray.map((item) => (
@@ -416,17 +401,10 @@ export default class App extends React.Component {
 							this.marker = marker;
 						}}
 					>
-
-					{/* {this.state.uuid ==  item.uuid && ( */}
-						<Text>{item.username}</Text>
-					{/* )}  */}
-
-					{/* <Text>{item.uuid}</Text> */}
-						
+						<Text style={styles.name}>{item.username}</Text>
 						<Image
 							style={styles.profile}
 							source={
-								// (this.state.localAtual.latitude ==  item.latitude) ?
 								(this.state.uuid ==  item.uuid) ?
 								require('./assets/marker_eu.png'):
 								require('./assets/marker_outro.png')
@@ -434,6 +412,7 @@ export default class App extends React.Component {
 						/>
 					</Marker>
 				))}
+				
 				{/* MOSTRA A ROTA	 */}
 					<MapViewDirections
 						origin = {this.state.localAtual.latitude +',' + this.state.localAtual.longitude}
@@ -442,15 +421,10 @@ export default class App extends React.Component {
 						strokeColor="rgb(0,139,241)"
 						apikey={GOOGLE_MAPS_APIKEY}
 					/>
-
 				</MapView>
 				
 				{/* Top Bar */}
         		<View style={styles.containerTopBar}>
-					
-					<TouchableOpacity onPress={() => {this.modalVisivel(true);}}>
-						<Image style={styles.topBarLogo} source={require('./assets/logo.png')} />
-					</TouchableOpacity>
 					<View style={{ flexDirection: 'row', justifyContent: 'center' }}>
 						<Image style={styles.topBarLogo} source={require('./assets/logo.png')} />
 					</View>	
@@ -464,6 +438,11 @@ export default class App extends React.Component {
 						<View style={styles.txtCircle}>
 							<Text style={{fontSize: 10,textAlign: 'center', color:'#0084ff'}}>{this.state.totUsuariosAtivos}</Text>
 						</View>
+					</View>	
+					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+						<TouchableOpacity onPress={() => {this.modalVisivel(true);}}>
+							<Image style={styles.topBarImgCenter} source={require('./assets/user.png')} />
+						</TouchableOpacity>
 					</View>	
 					<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
 						<Image style={styles.topBarImgLeft} source={require('./assets/visivel.png')} />
