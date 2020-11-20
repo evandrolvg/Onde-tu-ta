@@ -48,7 +48,7 @@ export default class App extends React.Component {
 		try {
 			const value = await AsyncStorage.getItem('@username')
 			if(value !== null) {
-				this.setState({username: value});
+				this.setState({username: value, inputTextNome: value});
 			}
 		} catch(e) {
 			console.log('Erro getDados');
@@ -342,20 +342,13 @@ export default class App extends React.Component {
 				<Modal transparent={true}  animationType="fade" visible={this.state.modalVisivel} 
                   onRequestClose={() => this.modalVisivel(false)} style={styles.modalContainer}>
                   <View style={styles.modalView}>
-                      <View style={styles.footerView}>
-                        <Text style={styles.footerText}>
-                          <Text>
-                            Nome
-                          </Text>
-                        </Text>
-                      </View>
                       <TextInput
                         style={styles.input}
                         placeholder="Nome"
                         placeholderTextColor="#aaaaaa"
                         onChangeText={(username) => {
                                                         this.setState({inputTextNome: username, username: username}); 
-                                                        console.log('state ', this.state.inputTextNome)
+                                                        console.log('state', this.state.inputTextNome)
                                                       }}
                         defaultValue={this.state.inputTextNome}
                         underlineColorAndroid="transparent"
