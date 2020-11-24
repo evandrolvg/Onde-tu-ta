@@ -3,7 +3,7 @@
 </p>
 
 
-![Screenshot](screenshots/screens01.gif)
+![Screenshot](screenshots/screen01.gif)
 
 ## Descrição
 Aplicativo de rastreamento geográfico simples que renderiza vários usuários em um mapa. Os usuários poderão alternar suas permissões de localização, bem como clicar em um botão para ampliar o mapa em sua localização. Utiliza o [PubNub Presence](https://www.pubnub.com/products/presence/) para rastrear usuários estão online no aplicativo.
