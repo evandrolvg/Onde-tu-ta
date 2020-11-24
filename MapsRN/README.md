@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-    <img src="screenshots/screen01.gif" width="50%" title="icon">
+    <img src="screenshots/screen01.gif" width="35%" title="icon">
 </p>
 
 ## Descrição
